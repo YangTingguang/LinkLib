@@ -1,0 +1,195 @@
+        #region 注册软件
+        /// <summary>
+        ///  注册软件 试用
+        /// </summary>
+        /// <param name="userName"></param>
+        private void RedisterSoftware()
+        {
+            while (true)
+            {
+                /*永久注册机使用机制
+                 1、先判断是不是永久使用版本（要使用独立的注册机）
+                 2、当不是永久版本时给予试用时间为7天（天数可自定义），实施获取当前时间，不能大于试用时间，也不能小于当前获取的时间
+                 3、超过7天时不给予使用（停止用户使用本软件），这时要弹出提示窗口（不能关闭的窗口，而需窗口要单例的）
+                 */
+                RegistryKey retkey = null;
+                RegistryKey delKey = null;
+                try
+                {
+                    //永久注册机
+                    retkey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\VisualSystem\regedit", false);
+                    if (retkey != null)
+                    {
+
+                        if (My_Encrypt.RsaDesEncrypt(retkey.GetValue("key").ToString()) == My_Encrypt.GetCpuID())
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            delKey = Registry.LocalMachine.OpenSubKey(@"Software", true);
+                            delKey.DeleteValue("VisualSystem");
+                            delKey.Close();
+                            WinForm.HintForm.GetInstance().richTextBox1.Text = "注册失败请联系厂家\n请联系厂家";
+                            WinForm.HintForm.GetInstance().richTextBox1.Enabled = false;
+                            WinForm.HintForm.GetInstance().ShowDialog();
+
+                        }
+                    }
+                    else//不存在时
+                    {
+                        //实时获取当前时间并写入注册机中
+                        long now = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmss"));
+                        //软件试用指定的天数
+                        DateTime dt = DateTime.Now;
+                        long appoint = Convert.ToInt64(dt.AddDays(7).ToString("yyyyMMddHHmmss"));
+                        RegistryKey _root = null;
+                        RegistryKey _rk = null;
+
+                        RegistryKey aimdir = null;
+                        try
+                        {
+                            //打开注册表
+                            _root = Registry.LocalMachine;
+                            _rk = _root.OpenSubKey(@"SOFTWARE\YunQinVisual", false);
+                            //判断是否为空
+                            if (_rk == null)
+                            {
+                                //为空
+                                bool flag = MACHINERegedit("now", now.ToString(), "appoint", appoint.ToString());
+                                if (flag != true)
+                                {
+
+                                    WinForm.HintForm.GetInstance().richTextBox1.Text = "试用失败\n请联系厂家";
+                                    WinForm.HintForm.GetInstance().richTextBox1.Enabled = false;
+                                    WinForm.HintForm.GetInstance().ShowDialog();
+                                }
+                            }
+                            else
+                            {
+                                if (now >= Convert.ToInt64(_rk.GetValue("now")) && now <= Convert.ToInt64(_rk.GetValue("appoint")))
+                                {//条件满足
+                                    _root = Registry.LocalMachine;
+                                    _rk = _root.OpenSubKey("SOFTWARE", true);
+                                    aimdir = _rk.CreateSubKey("YunQinVisual");
+                                    aimdir.SetValue("now", now);
+
+                                }
+                                else
+                                {
+
+                                    WinForm.HintForm.GetInstance().richTextBox1.Text = "试用时间已到\n请联系厂家";
+                                    WinForm.HintForm.GetInstance().richTextBox1.Enabled = false;
+                                    WinForm.HintForm.GetInstance().ShowDialog();
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            WinForm.HintForm.GetInstance().richTextBox1.Text = "试用失败\n请联系厂家";
+                            WinForm.HintForm.GetInstance().richTextBox1.Enabled = false;
+                            WinForm.HintForm.GetInstance().ShowDialog();
+                            /*bool flag = MACHINERegedit("now", now.ToString(), "appoint", appoint.ToString());
+                            if (flag == true)
+                            {
+                                MessageBox.Show("试用成功", "提示");
+                            }
+                            else
+                            {
+                                MessageBox.Show("试用失败", "提示");
+                            }*/
+
+                        }
+                        finally
+                        {
+                            if (_root != null)
+                            {
+                                _root.Close();
+                            }
+                            if (_rk != null)
+                            {
+                                _rk.Close();
+                            }
+                            /*  if (hklm != null)
+                              {
+                                  hklm.Dispose();
+                              }
+                              if (software!=null)
+                              {
+                                  software.Dispose();
+                              }*/
+                            if (aimdir != null)
+                            {
+                                aimdir.Dispose();
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+                finally
+                {
+                    if (retkey != null)
+                    {
+                        retkey.Dispose();
+                    }
+                    if (delKey != null)
+                    {
+                        delKey.Dispose();
+                    }
+                }
+
+
+
+
+                Application.DoEvents();
+                Thread.Sleep(60000 * 30);
+            }
+
+        }
+        /// <summary>
+        /// HKEY_LOCAL_MACHINE  写
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="tovalue"></param>
+        /// <param name="keyName"></param>
+        /// <param name="value"></param>
+        /// <param name="tian">试用天数</param>
+        /// <returns></returns>
+        public static bool MACHINERegedit(string name, string tovalue, string keyName, string value, double tian = 7)
+        {
+            /* //现在
+             long now = Convert.ToInt64(DateTime.Now.ToString("yyyyMMddHHmmss"));
+             //指定7天
+             DateTime dt = DateTime.Now;
+             long appoint = Convert.ToInt64(dt.AddDays(tian).ToString("yyyyMMddHHmmss")); //增加一天*/
+
+            RegistryKey hklm = null;
+            RegistryKey software = null;
+            RegistryKey aimdir = null;
+            try
+            {
+                hklm = Registry.LocalMachine;
+                software = hklm.OpenSubKey("SOFTWARE", true);
+                aimdir = software.CreateSubKey("YunQinVisual");
+                aimdir.SetValue(name, tovalue);
+                aimdir.SetValue(keyName, value);
+                //aimdir.SetValue("Temp", tovalue);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception caught: {0}", ex);
+                return false;
+            }
+            finally
+            {
+                hklm.Close();
+                software.Close();
+                aimdir.Close();
+
+            }
+        }
+        #endregion

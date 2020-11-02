@@ -1,0 +1,21 @@
+ [DllImport("kernel32")]
+ 5         private static extern long WritePrivateProfileString(string section, string key, string val, string filepath);
+ 6 
+ 7         [DllImport("kernel32")]
+ 8         private static extern int GetPrivateProfileString(string section, string key, string def, StringBuilder retval, int size, string filepath);
+ 9 
+10 
+11         //----------------------读写INI-------------------------------------------------------------------------
+12 
+13         public void IniWriteValue(string Section, string Key, string Value, string filepath)//对ini文件进行写操作的函数
+14         {
+15             WritePrivateProfileString(Section, Key, Value, filepath);
+16         }
+17 
+18 
+19         public string IniReadValue(string Section, string Key, string filepath)//对ini文件进行读操作的函数
+20         {
+21             StringBuilder temp = new StringBuilder(255);
+22             int i = GetPrivateProfileString(Section, Key, "", temp, 255, filepath);
+23             return temp.ToString();
+24         }
